@@ -1,6 +1,6 @@
 <template>
   <div class="shopcart">
-    <div class="content">
+    <div class="content" @click="toggleList">
       <div class="content-left">
         <div class="logo-wrapper">
           <div class="logo" :class="{'hightLight':totalCount>0}">
@@ -16,11 +16,37 @@
           {{payDesc}}
         </div>
       </div>
+      <transition name="fade">
+        <div class="shopcart-list" v-show="listShow">
+          <div class="list-header">
+            <span class="title glyphicon glyphicon-tags"></span>
+            <span class="empty glyphicon glyphicon-trash" @click="empty"></span>
+          </div>
+          <div class="list-content" ref="listContent">
+            <ul>
+              <li class="food" v-for="food in selectFoods">
+                <span class="name">{{food.name}}</span>
+                <div class="price">
+                  <span>￥{{food.price * food.count}}</span>
+                </div>
+                <div class="controlcart-wrapper">
+                  <controlcart :food="food"></controlcart>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </transition>
+      <transition name="fade">
+        <div class="list-mask" v-show="listShow" @click="hideList()"></div>
+      </transition>
     </div>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
+  import BScroll from 'better-scroll';
+  import controlcart from '../controlcart/controlcart.vue';
 
   export default {
     props: {
@@ -42,6 +68,11 @@
       minPrice:{
         type: Number,
         default: 0
+      }
+    },
+    data() {
+      return {
+        fold: true    // 控制购物车折叠效果的标志,默认是true代表折叠
       }
     },
     computed: {
@@ -75,9 +106,31 @@
         }else {
           return 'enough';
         }
+      },
+      listShow() {
+        if(!this.totalCount) {  //判断没有数量的情况
+          this.fold = true;   //折叠属性设置为true,即折叠起来,主要是更新fold的状态
+          return false;   //返回false是给v-show使用,false会display none
+        }
+        let show = !this.fold;    //使用fold的状态取反来实现常用的切换状态处理逻辑
+        if(show) {
+          this.$nextTick(() => {
+            if(!this.show) {
+              this.scroll = new BScroll(this.$refs.listContent,{
+                click: true
+              });
+            }else {
+              this.scroll.refresh();
+            }
+          });
+        }
+        return show;
+      },
+      hideList() {
+        this.fold = true;
       }
     },
-    method:{
+    methods:{
       drop(el) {
         for (let i=0;i<this.balls.length;i++) {
           let ball = this.balls[i];
@@ -88,12 +141,28 @@
             return;
           }
         }
+      },
+      toggleList() {
+        if(!this.totalCount) {
+          return;
+        }
+        this.fold = !this.fold;
+      },
+      empty() {
+        this.selectFoods.forEach((food) => {
+          food.count = 0;
+        })
       }
+    },
+    components: {
+      controlcart
     }
   }
 </script>
 
 <style lang="less" rel="stylesheet/less" type="text/css">
+  @import "../../common/less/mixin.less";
+
   .shopcart{
     position: fixed;
     left: 0;
@@ -194,6 +263,95 @@
             color: #ffffff;
           }
         }
+      }
+      .shopcart-list{
+        position: absolute;
+        left: 0;
+        top:0;
+        z-index: -1;
+        width: 100%;
+        transform: translate3D(0,-100%,0);    /*整个列表相对于当前自身的高度做一个偏移*/
+        &.fade-enter-active,&.fade-leave-active{
+          transition: all 0.5s linear;
+          transform: translate3D(0,-100%,0);    /*每个表项相对于当前自身的高度做一个偏移*/
+        }
+        &.fade-enter,&.fade-leave-active{
+          transform: translate3D(0,0,0);
+        }
+        .list-header{
+          height: 40px;
+          line-height: 40px;
+          padding: 0 18px;
+          background: #f3f5f7;
+          border-bottom: 1px solid rgba(7,17,27,0.1);
+          .title{
+            float: left;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            color: rgb(7,17,27);
+            margin-top: 12px;
+          }
+          .empty{
+            float: right;
+            font-size: 12px;
+            font-weight: bold;
+            color: rgb(0,160,220);
+            margin-top: 12px;
+          }
+        }
+        .list-content{
+          width: 100%;
+          padding: 0 18px;
+          max-height: 217px;
+          overflow: hidden;
+          background: #ffffff;
+          .food{
+            position: relative;
+            padding: 12px 0;
+            box-sizing: border-box;
+            .border-1px(rgba(7,17,27,0.1));
+            .name{
+              line-height: 24px;
+              font-size: 14px;
+              color: rgb(7,17,27);
+            }
+            .price{
+              position: absolute;
+              right: 90px;
+              bottom: 12px;
+              line-height: 24px;
+              font-weight: 700;
+              font-size: 14px;
+              color: rgb(240,20,20);
+            }
+            .controlcart-wrapper{
+              position: absolute;
+              right: 0;
+              bottom: 6px;
+            }
+          }
+        }
+      }
+    }
+    .list-mask{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      backdrop-filter: blur(10px);
+      opacity: 1;
+      background: rgba(7, 17, 27, 0.6);
+      &.fade-enter-active, &.fade-leave-active{
+        opacity: 1;
+        transition: all 0.5s;
+        background: rgba(7, 17, 27, 0.6);
+      }
+      &.fade-enter, &.fade-leave-active{
+        opacity: 0;
+        background: rgba(7,17,27,0);
       }
     }
   }
