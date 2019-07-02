@@ -11,7 +11,7 @@
         <div class="price" :class="{'hightLight':totalPrice>0}">￥{{totalPrice}}</div>
         <div class="desc">另需配送费&nbsp;￥{{deliveryPrice}}</div>
       </div>
-      <div class="content-right">
+      <div class="content-right" @click.stop.prevent="pay"> <!--.stop.prevent：阻止冒泡及默认事件-->
         <div class="pay" :class="payClass">
           {{payDesc}}
         </div>
@@ -37,10 +37,10 @@
           </div>
         </div>
       </transition>
-      <transition name="fade">
-        <div class="list-mask" v-show="listShow" @click="hideList()"></div>
-      </transition>
     </div>
+    <transition name="fade">
+      <div class="list-mask" v-show="listShow" @click="hideList"></div>
+    </transition>
   </div>
 </template>
 
@@ -115,7 +115,7 @@
         let show = !this.fold;    //使用fold的状态取反来实现常用的切换状态处理逻辑
         if(show) {
           this.$nextTick(() => {
-            if(!this.show) {
+            if(!this.scroll) {
               this.scroll = new BScroll(this.$refs.listContent,{
                 click: true
               });
@@ -125,9 +125,6 @@
           });
         }
         return show;
-      },
-      hideList() {
-        this.fold = true;
       }
     },
     methods:{
@@ -148,10 +145,19 @@
         }
         this.fold = !this.fold;
       },
+      hideList() {
+        this.fold = true;
+      },
       empty() {
         this.selectFoods.forEach((food) => {
           food.count = 0;
         })
+      },
+      pay() {
+        if(this.totalPrice < this.minPrice) {
+          return;
+        }
+        window.alert(`请支付￥${this.totalPrice + 4}`);
       }
     },
     components: {
